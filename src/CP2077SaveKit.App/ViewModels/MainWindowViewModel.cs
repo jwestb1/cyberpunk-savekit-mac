@@ -295,6 +295,15 @@ public partial class MainWindowViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    /// <summary>Write edits back over the loaded save file (same name and folder). The original is
+    /// backed up first by SaveToPathAsync.</summary>
+    [RelayCommand]
+    private Task SaveCurrentAsync()
+    {
+        if (string.IsNullOrEmpty(LoadedPath)) { Status = "Open a save first."; return Task.CompletedTask; }
+        return SaveToPathAsync(LoadedPath);
+    }
+
     /// <summary>Write current edits as a brand-new Manual save in the game's saves folder, so it
     /// appears in the in-game load menu. No file dialog needed.</summary>
     [RelayCommand]
