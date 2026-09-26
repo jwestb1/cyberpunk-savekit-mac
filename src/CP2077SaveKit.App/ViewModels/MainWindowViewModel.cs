@@ -16,6 +16,7 @@ public partial class ItemRow : ObservableObject
 {
     public ulong Hash { get; init; }
     public string Display { get; init; } = "";
+    public string Category { get; init; } = "";  // same names as the Add Item category dropdown
     public ulong SubInventoryId { get; init; }   // with Index, locates this exact entry in the save
     public int Index { get; init; }
     public uint OriginalQuantity { get; init; }  // quantity in the in-memory save when the row was built
@@ -122,6 +123,11 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly List<ItemRow> _allItems = new();
     public ObservableCollection<ItemRow> Items { get; } = new();
 
+    // Inventory category filter: "All" plus the categories present in the loaded save.
+    [ObservableProperty] private string _inventoryCategory = "All";
+    public ObservableCollection<string> InventoryCategories { get; } = new() { "All" };
+    partial void OnInventoryCategoryChanged(string value) => ApplyFilter();
+
     // --- Add-Item picker ---
     [ObservableProperty] private string _catalogSearch = "";
     [ObservableProperty] private CatalogItem? _selectedCatalogItem;
@@ -169,7 +175,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var it in sub.Items)
                 list.Add(new ItemRow
                 {
-                    Hash = it.IdHash, Display = it.Display,
+                    Hash = it.IdHash, Display = it.Display, Category = AioCatalog.Shared.CategoryOf(it.IdHash),
                     SubInventoryId = it.SubInventoryId, Index = it.Index,
                     OriginalQuantity = it.Quantity, Quantity = it.Quantity,
                 });
@@ -182,6 +188,7 @@ public partial class MainWindowViewModel : ObservableObject
         _allItems.Clear();
         _allItems.AddRange(BuildRows(save));
         _savedMoney = Money = InventoryEditor.GetQuantity(save, InventoryEditor.MoneyHash);
+        RefreshInventoryCategories();
         ApplyFilter();
     }
 
@@ -223,7 +230,8 @@ public partial class MainWindowViewModel : ObservableObject
             _allItems.Clear();
             _allItems.AddRange(r.rows);
             _savedMoney = Money = r.money;
-                ApplyFilter();
+            RefreshInventoryCategories();
+            ApplyFilter();
             ApplyCatalogFilter();
 
             Attributes.Clear();
@@ -253,10 +261,26 @@ public partial class MainWindowViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    /// <summary>Refresh the category dropdown from the loaded rows, in the Add Item tab's order.</summary>
+    private void RefreshInventoryCategories()
+    {
+        var present = _allItems.Select(r => r.Category).ToHashSet();
+        var wanted = new List<string> { "All" };
+        wanted.AddRange(Categories.Where(present.Contains));
+        wanted.AddRange(present.Where(c => !Categories.Contains(c)).OrderBy(c => c == AioCatalog.OtherCategory).ThenBy(c => c));
+        if (wanted.SequenceEqual(InventoryCategories)) return;
+        var keep = InventoryCategory;
+        InventoryCategories.Clear();
+        foreach (var c in wanted) InventoryCategories.Add(c);
+        InventoryCategory = wanted.Contains(keep) ? keep : "All";
+    }
+
     private void ApplyFilter()
     {
         Items.Clear();
         IEnumerable<ItemRow> q = _allItems;
+        if (InventoryCategory is not (null or "All"))
+            q = q.Where(i => i.Category == InventoryCategory);
         if (!string.IsNullOrWhiteSpace(Search))
             q = q.Where(i => i.Display.Contains(Search, StringComparison.OrdinalIgnoreCase)
                           || i.HashHex.Contains(Search, StringComparison.OrdinalIgnoreCase));

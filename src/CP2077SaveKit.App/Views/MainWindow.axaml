@@ -81,7 +81,9 @@
                                 IsEnabled="{Binding IsLoaded}">
                         <TextBlock Text="Eddies:" VerticalAlignment="Center"/>
                         <TextBox Text="{Binding Money}" Width="160"/>
-                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        <TextBlock Text="Category:" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        <ComboBox ItemsSource="{Binding InventoryCategories}" SelectedItem="{Binding InventoryCategory}" Width="140"/>
+                        <TextBlock Text="Search:" VerticalAlignment="Center" Margin="8,0,0,0"/>
                         <TextBox Text="{Binding Search}" Width="300" Watermark="filter items by name or hash"/>
                     </StackPanel>
                     <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="4">
