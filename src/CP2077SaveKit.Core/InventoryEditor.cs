@@ -30,6 +30,21 @@ public static class InventoryEditor
 
     public static bool SetMoney(SaveFile save, uint amount) => SetQuantity(save, MoneyHash, amount);
 
+    /// <summary>Set the quantity of one specific entry, located by sub-inventory + index (as
+    /// reported by InventoryReader). idHash must match the entry, guarding against a stale
+    /// location. Returns true if the entry was found and updated.</summary>
+    public static bool SetQuantityAt(SaveFile save, ulong subInventoryId, int index, ulong idHash, uint quantity)
+    {
+        var node = FindNode(save.Nodes, Constants.NodeNames.INVENTORY);
+        if (node?.Value is not Inventory inv) return false;
+        var sub = inv.SubInventories.FirstOrDefault(s => s.InventoryId == subInventoryId);
+        if (sub is null || index < 0 || index >= sub.Items.Count) return false;
+        var item = sub.Items[index];
+        if ((ulong)item.ItemInfo.ItemId.Id != idHash) return false;
+        item.Quantity = quantity;
+        return true;
+    }
+
     /// <summary>Read current quantity for an item hash (0 if absent). When the item exists in
     /// several sub-inventories, returns the largest quantity: the player-facing entry (e.g. the
     /// money wallet) is not always first, and stale duplicates observed in real saves carry a
